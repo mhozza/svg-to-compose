@@ -78,6 +78,15 @@ lint/outputs/
 lint/tmp/
 # lint/reports/
 
+### Skill Artifacts ###
+*.skill
+skill-dist/*/assets/*.jar
+
+### Agent & Tool Artifacts ###
+.gemini/
+test_assets/
+test_output/
+
 ### Android Patch ###
 gen-external-apklibs
 output.json
