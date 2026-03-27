@@ -60,31 +60,6 @@ class VectorAssetGenerator(
         // the size from ~6000 to 1, and speed up compilation time for these icons.
         @OptIn(ExperimentalStdlibApi::class)
         val backingPropertyName = "_" + iconName.decapitalize(Locale.ROOT)
-        val backingProperty = backingPropertySpec(name = backingPropertyName, ClassNames.ImageVector)
-
-        val generation = FileSpec.builder(
-            packageName = iconGroupPackage,
-            fileName = iconName
-        ).addProperty(
-            PropertySpec.builder(name = iconName, type = ClassNames.ImageVector)
-                .receiver(groupClassName)
-                .getter(iconGetter(backingProperty))
-                .build()
-        ).addProperty(
-            backingProperty
-        )
-            .apply { if (generatePreview) addFunction(iconPreview(groupClassName.simpleName, iconName)) }
-            .setIndent().build()
-
-        return VectorAssetGenerationResult(generation, iconName)
-    }
-
-    /**
-     * @return the body of the getter for the icon property. This getter returns the backing
-     * property if it is not null, otherwise creates the icon and 'caches' it in the backing
-     * property, and then returns the backing property.
-     */
-    private fun iconGetter(backingProperty: PropertySpec): FunSpec {
 
         val parameterList = with(vector) {
             listOfNotNull(
@@ -104,20 +79,29 @@ class VectorAssetGenerator(
             vector.height.memberName
         ).toTypedArray()
 
-        return FunSpec.getterBuilder()
-            .withBackingProperty(backingProperty) {
-                addCode(buildCodeBlock {
+        val generation = FileSpec.builder(
+            packageName = iconGroupPackage,
+            fileName = iconName
+        ).addProperty(
+            PropertySpec.builder(name = iconName, type = ClassNames.ImageVector)
+                .delegate(buildCodeBlock {
+                    val lazyThreadSafetyMode = ClassName("kotlin", "LazyThreadSafetyMode")
+                    beginControlFlow("lazy(%T.NONE)", lazyThreadSafetyMode)
                     beginControlFlow(
-                        "%N = %M$parameters.apply",
-                        backingProperty,
+                        "%M$parameters.apply",
                         *members
                     )
                     vector.nodes.forEach { node -> addRecursively(node) }
                     endControlFlow()
                     addStatement(".build()")
+                    endControlFlow()
                 })
-            }
-            .build()
+                .build()
+        )
+            .apply { if (generatePreview) addFunction(iconPreview(groupClassName.simpleName, iconName)) }
+            .setIndent().build()
+
+        return VectorAssetGenerationResult(generation, iconName)
     }
 
     /**

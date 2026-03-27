@@ -39,22 +39,22 @@ class AllIconAccessorGenerator(
         }
 
         val allIconsParameters = iconProperties.map { "%M" }
-        val parameters = allIconsParameters.joinToString(prefix = "(", postfix = ")")
+        val parameters = allIconsParameters.joinToString(prefix = "listOf(", postfix = ")")
         val childGroupsParameters = allIconsParametersFromGroups.joinToString(" + ")
 
         val allIconProperty = PropertySpec.builder(allAssetsPropertyName, allIconsType)
-            .receiver(accessClass)
-            .getter(FunSpec.getterBuilder().withBackingProperty(allIconsBackingProperty) {
+            .delegate(buildCodeBlock {
+                val lazyThreadSafetyMode = ClassName("kotlin", "LazyThreadSafetyMode")
+                beginControlFlow("lazy(%T.NONE)", lazyThreadSafetyMode)
                 addStatement(
-                    "%N= ${if(childGroups.isNotEmpty()) "$childGroupsParameters + " else ""}listOf$parameters",
-                    allIconsBackingProperty,
+                    "${if(childGroups.isNotEmpty()) "$childGroupsParameters + " else ""}$parameters",
                     *(childGroups.map(::groupAllIconsMember) + iconProperties).toTypedArray()
                 )
-            }.build())
+                endControlFlow()
+            })
             .build()
 
         return buildList {
-            add(allIconsBackingProperty)
             add(allIconProperty)
 
             if (generateStringAccessor) {
