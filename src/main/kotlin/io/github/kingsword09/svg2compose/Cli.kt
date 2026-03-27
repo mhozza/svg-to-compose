@@ -44,7 +44,8 @@ fun main(args: Array<String>) {
             accessorName = accessorName,
             vectorsDirectory = inputDir,
             outputSourceDirectory = outputDir,
-            type = vectorType
+            type = vectorType,
+            generatePreview = false
         )
         println("Done!")
     } catch (e: Exception) {
