@@ -32,6 +32,7 @@ object Svg2Compose {
         allAssetsPropertyName: String = "AllAssets",
         generatePreview: Boolean = true,
         generateStringAccessor: Boolean = false,
+        generateAccessors: Boolean = true,
     ): ParsingResult {
         fun nameRelative(vectorFile: File) = vectorFile.relativeTo(vectorsDirectory).path
 
@@ -50,15 +51,27 @@ object Svg2Compose {
 
                 // if there is no previous group, this is the root dir, and the group name should be the accessorName
                 val groupName = if(previousGroup == null) accessorName else file.name.toKotlinPropertyName()
-                val groupPackage = previousGroup?.let { group -> "${group.groupPackage}.${group.groupName.second.toLowerCase()}" }
-                    ?: "$applicationIconPackage"
-                val iconsPackage = "$groupPackage.${groupName.toLowerCase()}"
+                val groupPackage = if (generateAccessors) {
+                    previousGroup?.let { group -> "${group.groupPackage}.${group.groupName.second.toLowerCase()}" }
+                        ?: "$applicationIconPackage"
+                } else {
+                    applicationIconPackage
+                }
+                val iconsPackage = if (generateAccessors) {
+                    "$groupPackage.${groupName.toLowerCase()}"
+                } else {
+                    applicationIconPackage
+                }
 
-                val (groupFileSpec, groupClassName) = IconGroupGenerator(
-                    groupPackage,
-                    groupName,
-                    generateStringAccessor,
-                ).createFileSpec(previousGroup?.groupClass)
+                val (groupFileSpec, groupClassName) = if (generateAccessors) {
+                    IconGroupGenerator(
+                        groupPackage,
+                        groupName,
+                        generateStringAccessor,
+                    ).createFileSpec(previousGroup?.groupClass)
+                } else {
+                    FileSpec.builder(groupPackage, groupName) to ClassName(groupPackage, accessorName)
+                }
 
 
                 val generatedIconsMemberNames: Map<VectorFile, MemberName> =
@@ -128,19 +141,21 @@ object Svg2Compose {
                 else
                     groupStack.peek()
 
-                val allAssetsGenerator = AllIconAccessorGenerator(
-                    group.generatedIconsMemberNames.values.sortedBy { it.simpleName },
-                    group.groupClass,
-                    allAssetsPropertyName,
-                    group.childGroups,
-                    generateStringAccessor,
-                )
+                if (generateAccessors) {
+                    val allAssetsGenerator = AllIconAccessorGenerator(
+                        group.generatedIconsMemberNames.values.sortedBy { it.simpleName },
+                        group.groupClass,
+                        allAssetsPropertyName,
+                        group.childGroups,
+                        generateStringAccessor,
+                    )
 
-                for (propertySpec in allAssetsGenerator.createPropertySpec(group.groupFileSpec)) {
-                    group.groupFileSpec.addProperty(propertySpec)
+                    for (propertySpec in allAssetsGenerator.createPropertySpec(group.groupFileSpec)) {
+                        group.groupFileSpec.addProperty(propertySpec)
+                    }
+
+                    group.groupFileSpec.build().writeTo(outputSourceDirectory)
                 }
-
-                group.groupFileSpec.build().writeTo(outputSourceDirectory)
             }
             .toList() // consume, to onEnter and onLeave be triggered
 

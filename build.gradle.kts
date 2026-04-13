@@ -3,12 +3,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    id("com.github.johnrengelman.shadow") version "8.1.1"
     `maven-publish`
     signing
+    application
 }
 
 group = "io.github.kingsword09"
 version = "0.1.0"
+
+application {
+    mainClass.set("io.github.kingsword09.svg2compose.CliKt")
+}
 
 dependencies {
     implementation(libs.android.tools.sdk)
@@ -23,7 +29,7 @@ tasks.test {
 }
 
 tasks.withType<KotlinCompile>() {
-    compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
 }
 
 java {
@@ -33,7 +39,7 @@ java {
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of("17"))
+        languageVersion.set(JavaLanguageVersion.of("21"))
     }
 }
 
