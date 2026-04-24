@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.0.0"
+kotlin = "2.3.21"
 android-tools = "31.13.0"
 kotlinpoet = "2.0.0"
 xpp3 = "1.1.6"
